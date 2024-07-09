@@ -1,0 +1,16 @@
+services:
+  train:
+    build: .
+    volumes:
+      - .:/train
+    tty: true
+    runtime: nvidia
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [utility, compute, video]
