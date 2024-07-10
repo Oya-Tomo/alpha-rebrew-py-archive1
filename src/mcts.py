@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from torch import Tensor
 from model import PVNet
-from board import Board, Stone, ACTION_COUNT, flip
+from bitboard import Board, Stone, ACTION_COUNT, flip
 
 
 class MCT:

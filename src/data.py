@@ -21,7 +21,7 @@ class MCTSDataset(Dataset):
         return (
             item.board.to_tensor(item.stone),
             torch.tensor(item.policy),
-            torch.tensor(item.value),
+            torch.tensor([item.value]),
         )
 
     def __len__(self):

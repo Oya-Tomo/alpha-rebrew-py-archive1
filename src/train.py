@@ -16,6 +16,8 @@ def train():
     sim = 30
     epochs = 10
 
+    save_epoch = 10
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     net = PVNet().to(device)
 
@@ -68,10 +70,10 @@ def train():
 
                 train_loss += loss.item()
 
-            print(f"Loss: {train_loss}")
-            loss_history.append(train_loss)
+            print(f"Loss: {train_loss / len(dataloader)}")
+            loss_history.append(train_loss / len(dataloader))
 
-        if loop % 10 == 99:
+        if loop % save_epoch == save_epoch - 1:
             if not os.path.exists("checkpoint"):
                 os.makedirs("checkpoint")
             torch.save(
