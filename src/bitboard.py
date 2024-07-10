@@ -1,3 +1,4 @@
+import copy
 import torch
 from enum import IntEnum
 
@@ -80,7 +81,7 @@ class Board:
 
     def act(self, stone: Stone, action: int) -> "Board":
         if action == 64:
-            return
+            return self
 
         if stone == Stone.BLACK:
             self.black_board, self.white_board = self._put(
@@ -96,6 +97,12 @@ class Board:
 
     def is_over(self) -> bool:
         return self.black_actions == 0 and self.white_actions == 0
+
+    def get_count(self):
+        b = self.black_board.bit_count()
+        w = self.white_board.bit_count()
+        e = 64 - b - w
+        return b, w, e
 
     @classmethod
     def _put(cls, pos: int, actor_board: int, oppnt_board: int) -> tuple[int, int]:

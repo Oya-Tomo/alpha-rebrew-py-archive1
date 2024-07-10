@@ -1,3 +1,4 @@
+import time
 import os
 import torch
 from torch.utils.data import DataLoader
@@ -9,12 +10,12 @@ from model import PVNet
 
 
 def train():
-    ray.init(num_cpus=10, num_gpus=1)
+    ray.init(num_cpus=15, num_gpus=1)
 
     loops = 10000
-    gpl = 300
-    sim = 30
-    epochs = 10
+    games = 300
+    sim = 40
+    epochs = 20
 
     save_epoch = 10
 
@@ -27,24 +28,29 @@ def train():
 
     loss_history = []
 
+    weights = ray.put(net.state_dict())
+    matches = [auto_match.remote(weights, sim) for _ in range(games)]
+    dataset = MCTSDataset(50000, 0.1)
+
     for loop in range(loops):
+        lt = time.time()
         print(f"Loop: {loop}")
-        weights = ray.put(net.cpu().state_dict())
+        weights = ray.put(net.state_dict())
 
-        print("Auto matching...")
-        matches = [auto_match.remote(weights, sim) for _ in range(gpl)]
-        results: list[MCTStep] = [ray.get(match) for match in matches]
+        print("Get matching...")
+        for c in range(games):
+            fin, matches = ray.wait(matches, num_returns=1)
+            rec = ray.get(fin[0])
+            dataset.add([rec])
+            matches.extend([auto_match.remote(weights, sim)])
+            print(f"\rMatch: {c}")
 
-        print("Creating dataset...")
-        dataset = MCTSDataset()
-        for result in results:
-            dataset.add(result)
-
-        dataloader = DataLoader(dataset, batch_size=256, shuffle=True)
+        dataloader = DataLoader(dataset, batch_size=512, shuffle=True)
         device = next(net.parameters()).device
 
         print("Training...")
         for epoch in range(epochs):
+            et = time.time()
             print(f"Epoch: {epoch}")
 
             train_loss = 0.0
@@ -72,6 +78,10 @@ def train():
 
             print(f"Loss: {train_loss / len(dataloader)}")
             loss_history.append(train_loss / len(dataloader))
+
+            print(f"Epoch Time: {time.time() - et}")
+
+        print(f"Loop Time: {time.time() - lt}")
 
         if loop % save_epoch == save_epoch - 1:
             if not os.path.exists("checkpoint"):

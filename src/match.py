@@ -6,7 +6,7 @@ import ray
 from dataclasses import dataclass
 
 from model import PVNet
-from board import Board, Stone, ACTION_COUNT, flip
+from bitboard import Board, Stone, ACTION_COUNT, flip
 from mcts import MCT
 
 

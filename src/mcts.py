@@ -128,6 +128,7 @@ class MCT:
             )
 
             action = random.choice(torch.where(scores == scores.max())[0])
+
             next_board = self.transition_cache[s][action]
 
             value = -self.evaluate(next_board, flip(stone))

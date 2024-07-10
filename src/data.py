@@ -7,13 +7,18 @@ from match import auto_match, MCTStep
 
 
 class MCTSDataset(Dataset):
-    def __init__(self) -> None:
+    def __init__(self, length: int, del_ratio: float) -> None:
         super().__init__()
 
         self.buffer: list[MCTStep] = []
+        self.length = length
+        self.del_ratio = del_ratio
 
     def add(self, record: list[MCTStep]):
         self.buffer.extend(record)
+
+        if len(self.buffer) > self.length:
+            self.buffer = self.buffer[int(self.length * self.del_ratio) :]
 
     def __getitem__(self, index):
         item: MCTStep = self.buffer[index]
