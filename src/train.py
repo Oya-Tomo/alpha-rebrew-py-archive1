@@ -13,14 +13,16 @@ def train():
     ray.init(num_cpus=15, num_gpus=1)
 
     loops = 10000
-    games = 300
+    games = 4
     sim = 40
     epochs = 20
 
-    save_epoch = 10
+    save_epoch = 2
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     net = PVNet().to(device)
+
+    print(f"predict device : {device}")
 
     optimizer = torch.optim.Adam(net.parameters(), lr=0.01)
     policy_criterion = torch.nn.CrossEntropyLoss()
@@ -28,25 +30,34 @@ def train():
 
     loss_history = []
 
-    weights = ray.put(net.state_dict())
+    weights = ray.put(net.cpu().state_dict())
     matches = [auto_match.remote(weights, sim) for _ in range(games)]
     dataset = MCTSDataset(50000, 0.1)
 
     for loop in range(loops):
         lt = time.time()
         print(f"Loop: {loop}")
-        weights = ray.put(net.state_dict())
+        weights = ray.put(net.cpu().state_dict())
 
         print("Get matching...")
         for c in range(games):
             fin, matches = ray.wait(matches, num_returns=1)
             rec = ray.get(fin[0])
-            dataset.add([rec])
+            dataset.add(rec)
             matches.extend([auto_match.remote(weights, sim)])
             print(f"\rMatch: {c}")
 
-        dataloader = DataLoader(dataset, batch_size=512, shuffle=True)
-        device = next(net.parameters()).device
+        print("dataset len : ", len(dataset))
+
+        dataloader = DataLoader(
+            dataset, batch_size=512, shuffle=True, num_workers=5, pin_memory=True
+        )
+
+        net = net.to(device)
+
+        print(f"using device : {device}")
+
+        net.train()
 
         print("Training...")
         for epoch in range(epochs):

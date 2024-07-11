@@ -23,6 +23,7 @@ def auto_match(state_dict, simul: int, alpha: float = 0.35):
     board = Board()
     net = PVNet()
     net.load_state_dict(state_dict)
+    net.eval()
 
     mct = MCT(net, alpha)
     stone = Stone.BLACK
