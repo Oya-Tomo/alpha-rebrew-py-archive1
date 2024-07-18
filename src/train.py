@@ -13,9 +13,11 @@ def train():
     ray.init(num_cpus=15, num_gpus=1)
 
     loops = 10000
-    games = 4
-    sim = 40
-    epochs = 20
+    games = 400
+    sim = 50
+    epochs = 100
+    start_epoch = 0
+    buffer_size = 500000
 
     save_epoch = 2
 
@@ -30,11 +32,17 @@ def train():
 
     loss_history = []
 
+    if start_epoch != 0:
+        data = torch.load(f"checkpoint/model_{start_epoch - 1}.pt")
+        net.load_state_dict(data["model"])
+        optimizer.load_state_dict(data["optimizer"])
+        loss_history = data["loss_history"]
+
     weights = ray.put(net.cpu().state_dict())
     matches = [auto_match.remote(weights, sim) for _ in range(games)]
-    dataset = MCTSDataset(50000, 0.1)
+    dataset = MCTSDataset(buffer_size, 0.01)
 
-    for loop in range(loops):
+    for loop in range(start_epoch, loops):
         lt = time.time()
         print(f"Loop: {loop}")
         weights = ray.put(net.cpu().state_dict())
@@ -47,12 +55,9 @@ def train():
             matches.extend([auto_match.remote(weights, sim)])
             print(f"\rMatch: {c}")
 
-        print("dataset len : ", len(dataset))
-
         dataloader = DataLoader(
-            dataset, batch_size=512, shuffle=True, num_workers=5, pin_memory=True
+            dataset, batch_size=512, shuffle=True, num_workers=10, pin_memory=True
         )
-
         net = net.to(device)
 
         print(f"using device : {device}")
@@ -75,7 +80,7 @@ def train():
                 p_loss = policy_criterion(p_hat, p)
                 v_loss = value_criterion(v_hat, v)
 
-                l2_alpha = 1e-6
+                l2_alpha = 1e-8
                 l2 = torch.tensor(0.0, requires_grad=True)
                 for param in net.parameters():
                     l2 = l2 + torch.norm(param) ** 2

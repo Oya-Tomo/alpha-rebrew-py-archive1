@@ -1,5 +1,8 @@
+import random
 import torch
+import numpy as np
 from model import PVNet
+from mcts import MCT
 from bitboard import Board, Stone, pos_to_idx, flip
 
 
@@ -15,8 +18,9 @@ def test_match(stone: Stone):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     net = PVNet().to(device)
 
-    net.load_state_dict(torch.load("checkpoint/model_19.pt")["model"])
+    net.load_state_dict(torch.load("checkpoint/model_129.pt")["model"])
 
+    mct = MCT(net, 0.01)
     board = Board()
 
     turn = Stone.BLACK
@@ -29,7 +33,7 @@ def test_match(stone: Stone):
 
         actions = board.get_actions(turn)
 
-        if actions == [65]:
+        if actions == [64]:
             print("No valid moves. Passing.")
             turn = flip(turn)
             continue
@@ -46,18 +50,28 @@ def test_match(stone: Stone):
                 else:
                     print("Invalid move. Please try again.")
         else:
-            policy, value = net(board.to_tensor(turn).reshape(1, 2, 8, 8).to(device))
-            policy = policy[0]
+            policy = mct.search(board, turn, 2000)
+            policy = np.array(policy, dtype=np.float32)
+
+            _, value = net(board.to_tensor(turn).reshape(1, 2, 8, 8).to(device))
+            # _ = policy.cpu().detach().numpy().reshape(65)
+
             while True:
-                action = policy.argmax().item()
+                # action = int(random.choice(np.where(policy == policy.max())[0]))
+                action = int(np.argmax(policy))
 
                 if action in actions:
                     break
                 else:
                     policy[action] = -1
 
+            print(f"Value: {value.item()}")
+
         board.act(turn, action)
         turn = flip(turn)
+
+    b, w, e = board.get_count()
+    print(f"Result: Black - {b}, White - {w}, Empty - {e}")
 
 
 if __name__ == "__main__":

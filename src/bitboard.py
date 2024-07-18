@@ -67,7 +67,7 @@ class Board:
             s += "\n"
         return s
 
-    def get_actions(self, stone: Stone) -> int:
+    def get_actions(self, stone: Stone) -> list[int]:
         actor_actions = (
             self.black_actions if stone == Stone.BLACK else self.white_actions
         )
@@ -198,6 +198,17 @@ class Board:
         o = self.white_board if stone == Stone.BLACK else self.black_board
         key = (a << 64) + o
         return key
+
+    def get_board(self) -> list[list[Stone]]:
+        board = [[Stone.EMPTY for _ in range(8)] for _ in range(8)]
+        for i in range(64):
+            mask = 1 << i
+            x, y = idx_to_pos(i)
+            if self.black_board & mask:
+                board[y][x] = Stone.BLACK
+            elif self.white_board & mask:
+                board[y][x] = Stone.WHITE
+        return board
 
 
 def print_legal_board(board: int):
