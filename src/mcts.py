@@ -8,6 +8,10 @@ from model import PVNet
 from bitboard import Board, Stone, ACTION_COUNT, flip
 
 
+def count_to_score(b: int, w: int) -> float:
+    return (b - w) / (b + w)
+
+
 class MCT:
     def __init__(
         self,
@@ -97,14 +101,11 @@ class MCT:
 
         if board.is_over():
             b, w, e = board.get_count()
-            if b == w:
-                return 0
-            elif b > w and stone == Stone.BLACK:
-                return 1
-            elif b < w and stone == Stone.WHITE:
-                return 1
+            score = count_to_score(b, w)
+            if stone == Stone.BLACK:
+                return score
             else:
-                return -1
+                return -score
 
         elif s not in self.P:
             value = self.expand(board, stone)
